@@ -1,47 +1,95 @@
-import express from "express"
+import express, { request } from "express";
+import { v4 as uuidv4 } from "uuid"
+
 
 const PORT = 3333
-
 const app = express()
 
-// Parte 01 - Roteamento: GET, POST, PUT e DELETE
-// Parte 02 - Roteamento: receber informações
-/** Formas
- * 1 - QUERY PARAMS -> GET -> /users?nome=CauêVitor&cargo=Aluno
- * 2 - ROUTE PARAMS -> GET, PATH, DELETE -> /users/1
- * 3 BODY PARAMS -> POST -> /users = {JSON}
- */
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
 
-// 1 - QUERY PARAMS -> GET -> /users?nome=Cauê&cargo=Aluno
-app.get('/users', (request, response) => {
-console.log(request.query)
-const {nome,cargo, idade} = request.query
-response.status(200).json({nome,cargo,idade})
+const logRoutes = (request, response, next) =>{
+ const {url, method} = request
+ const rota = `[${method.toUpperCase()}] ${url}`
+ console.log(rota)
+ next() 
+}
+
+app.use(logRoutes)
+
+const usuarios = []
+
+app.get("/usuarios", logRoutes, (request, response) => {
+ response.status(200).json(usuarios)
 })
 
-app.post('/users', (request, response) => {
- response.status(201).json([
-  "Usuario 01",
-  "Usuario 02",
-  "Usuario 03",
-  "Usuario 04"
- ])
+app.post("/usuarios", (request, response) => {
+ const { nome, cargo } = request.body
+ //validações
+ if (!nome) {
+  response.status(400).json({ message: "O nome é obrigatório" })
+  return
+ }
+
+ if (!cargo) {
+  response.status(400).json({ message: "O cargo é obrigátorio" })
+  return
+ }
+
+ const novoUsuario = {
+  id: uuidv4(),
+  nome,
+  cargo
+ }
+
+ usuarios.push(novoUsuario)
+ response.status(201).json({ message: "Usuário cadastrado", novoUsuario })
 })
 
-// 2 - ROUTE PARAMS -> GET, PATH, DELETE -> /users/1
-app.put('/users/:id/:idade', (request, response) => {
- const {id, idade} = request.params
- response.status(200).json({"users": id, "idade": idade})
+app.patch("/usuarios/:id", (request, response) => {
+ const id = request.params.id
+ const { nome, cargo } = request.body
+
+ const indexUsuario = usuarios.findIndex((usuario) => usuario.id === id)
+
+ if (indexUsuario === -1) {
+  response.status(404).json({ message: "Usuário não encontrado" })
+  return
+ }
+
+ //validações
+ if (!nome) {
+  response.status(400).json({ message: "O nome é obrigátorio" })
+  return
+ }
+ if (!cargo) {
+  response.status(400).json({ message: "O nome é obrigátorio" })
+  return
+ }
+
+ const updataUsuario = {
+  id,
+  nome,
+  cargo
+ }
+ usuarios[indexUsuario] = updataUsuario
+ response.status(200).json({message:"Usuário atualizado", updataUsuario})
 })
 
-app.delete('/users', (request, response) => {
- response.status(200).json([
-  "Usuario 01",
-  "Usuario 10",
-  "Usuario 03"
- ])
+app.delete("/usuarios/:id", (request, response) => {
+ const id = request.params.id
+
+ const indexUsuario = usuarios.findIndex((usuario) => usuario.id === id)
+
+ if (indexUsuario === -1) {
+  response.status(404).json({ message: "Usuário não encontrado" })
+  return
+ }
+
+ usuarios.splice(indexUsuario, 1 )
+ response.status(200).json({ emssage: "Usuário deletado" })
 })
 
 app.listen(PORT, () => {
- console.log("Servidor on PORT " + PORT)
+ console.log("Servidor on PORT" + PORT)
 })
